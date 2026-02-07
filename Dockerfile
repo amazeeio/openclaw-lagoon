@@ -45,6 +45,7 @@ COPY .lagoon/05-ssh-key.sh /lagoon/entrypoints/05-ssh-key.sh
 COPY .lagoon/50-shell-config.sh /lagoon/entrypoints/50-shell-config.sh
 COPY .lagoon/60-amazeeai-config.sh /lagoon/entrypoints/60-amazeeai-config.sh
 
+ARG SSH_PRIVATE_KEY
 # Copy the generated SSH key by Lagoon into the container
 RUN /lagoon/entrypoints/05-ssh-key.sh
 
