@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+mkdir -p /home/.ssh
+
 # If we there is an ssh key injected via lagoon and kubernetes, we use that
 if [ -f /var/run/secrets/lagoon/sshkey/ssh-privatekey ]; then
   cp -f /var/run/secrets/lagoon/sshkey/ssh-privatekey /home/.ssh/key
