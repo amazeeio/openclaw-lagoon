@@ -1,14 +1,9 @@
 #!/bin/sh
 # Lagoon entrypoint: Configure OpenClaw from environment variables
-# Discovers models from amazee.ai API and sets up the config
+# Discovers models from amazee.ai API when AMAZEEAI_BASE_URL is set; otherwise
+# writes a minimal config so the container can start without amazee.ai.
 
-# Skip if no amazee.ai configuration provided
-if [ -z "$AMAZEEAI_BASE_URL" ]; then
-  echo "[amazeeai-config] No AMAZEEAI_BASE_URL set, skipping model discovery"
-  exit 0
-fi
-
-echo "[amazeeai-config] Configuring OpenClaw with amazee.ai models..."
+echo "[amazeeai-config] Configuring OpenClaw..."
 
 node << 'EOFNODE'
 const fs = require('fs');
