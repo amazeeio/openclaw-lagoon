@@ -6,8 +6,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        LAGOON_SSH_PRIVATE_KEY: " "
     user: "10000"
     env_file:
       - .env
