@@ -211,7 +211,7 @@ Create a new Slack app from a manifest using the following configuration. **Impo
 **2. Generate Tokens**
 
 After creating your Slack app:
-- Generate an **App-Level Token** (starts with `xapp-`)
+- Generate an **App-Level Token** with scope "connections:write" (the token starts with `xapp-`) 
 - Install the app to your workspace to get the **Bot User OAuth Token** (starts with `xoxb-`)
 
 **3. Configure Lagoon Environment Variables**
