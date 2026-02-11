@@ -300,6 +300,17 @@ After adding the environment variable, redeploy your Lagoon project. The contain
 
 To verify the setup, ask OpenClaw to clone a repository or check Git access through the chat interface.
 
+## Setting up Brave for Web Search (Optional)
+
+If you want OpenClaw to search the web using Brave, you're going to need a Brave API key.
+
+If you don't already have a Brave account, head over to http://brave.com/search/api/ and click "Get Started". Following the standard signup steps, and be sure to register for at least a "Free" account. Note, you will need a credit card with at least 1 USD available to get the Free tier going.
+
+Once you have a Brave account, head over to https://api-dashboard.search.brave.com/app/keys and create an API Key. Copy the new key, and create a Lagoon variable called "BRAVE_API_KEY" as you did before.
+
+Redploy your Lagoon project to get rolling with search.
+
+
 ## Local Development
 
 You can run OpenClaw locally using Docker Compose without needing to deploy to Lagoon. This is useful for testing, debugging, or developing new features for this repository.
