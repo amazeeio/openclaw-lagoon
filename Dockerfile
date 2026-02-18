@@ -34,6 +34,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     openssh-client \
     python3 \
+    python3-pip \
+    python3-venv \
     jq \
     procps \
     $EXTRA_APT_PACKAGES \
