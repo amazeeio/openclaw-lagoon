@@ -162,25 +162,25 @@ async function discoverModels() {
       }
     }
 
-    // Set default model if specified and found
+    // If AMAZEEAI_DEFAULT_MODEL is set, force it as primary model.
+    // If not set, leave default model config untouched.
     const modelIds = models.map(m => m.id);
     if (defaultModel) {
-      if (modelIds.includes(defaultModel)) {
-        config.agents.defaults.model.primary = `amazeeai/${defaultModel}`;
-        console.log('[amazeeai-config] Set default model to:', `amazeeai/${defaultModel}`);
-      } else {
+      const requestedPrimaryModel = `amazeeai/${defaultModel}`;
+      config.agents.defaults.model.primary = requestedPrimaryModel;
+      console.log('[amazeeai-config] Set default primary model from AMAZEEAI_DEFAULT_MODEL:', requestedPrimaryModel);
+
+      if (!config.agents.defaults.models[requestedPrimaryModel]) {
+        config.agents.defaults.models[requestedPrimaryModel] = {};
+        console.log('[amazeeai-config] Added default model to allowlist:', requestedPrimaryModel);
+      }
+
+      if (!modelIds.includes(defaultModel)) {
         console.warn(`[amazeeai-config] Warning: AMAZEEAI_DEFAULT_MODEL "${defaultModel}" not found in discovered models`);
         console.warn('[amazeeai-config] Available models:', modelIds.join(', '));
-        // Use first model as fallback
-        if (models.length > 0) {
-          config.agents.defaults.model.primary = `amazeeai/${models[0].id}`;
-          console.log('[amazeeai-config] Using first model as default:', `amazeeai/${models[0].id}`);
-        }
       }
-    } else if (models.length > 0 && !config.agents.defaults.model.primary) {
-      // No default specified and none configured - use first discovered model
-      config.agents.defaults.model.primary = `amazeeai/${models[0].id}`;
-      console.log('[amazeeai-config] No default specified, using first model:', `amazeeai/${models[0].id}`);
+    } else {
+      console.log('[amazeeai-config] No AMAZEEAI_DEFAULT_MODEL set; leaving default model config unchanged');
     }
 
   } catch (error) {
