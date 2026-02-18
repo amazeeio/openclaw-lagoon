@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 # Install openclaw globally, skipping postinstall scripts that build native code
 # This disables local LLM support (node-llama-cpp) but works fine with API providers like amazeeai
-ARG OPENCLAW_VERSION=2026.2.15
+ARG OPENCLAW_VERSION=2026.2.17
 RUN npm install -g --ignore-scripts openclaw@${OPENCLAW_VERSION}
 
 # Verify installation
