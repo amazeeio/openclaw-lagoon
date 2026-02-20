@@ -45,6 +45,10 @@ RUN apt-get update && apt-get install -y \
 # "source ..." works consistently in non-interactive command execution.
 RUN ln -sf /bin/bash /bin/sh
 
+# Create the runtime user
+RUN groupadd --gid 10000 openclaw && \
+    useradd --uid 10000 --gid 0 --groups openclaw --home-dir /home --shell /bin/bash --no-create-home openclaw
+
 # Create Lagoon directory structure
 RUN mkdir -p /lagoon/entrypoints /lagoon/bin /home
 
