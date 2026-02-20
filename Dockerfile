@@ -41,6 +41,10 @@ RUN apt-get update && apt-get install -y \
     $EXTRA_APT_PACKAGES \
     && rm -rf /var/lib/apt/lists/*
 
+# Some tools execute commands through /bin/sh; point it to bash so
+# "source ..." works consistently in non-interactive command execution.
+RUN ln -sf /bin/bash /bin/sh
+
 # Create Lagoon directory structure
 RUN mkdir -p /lagoon/entrypoints /lagoon/bin /home
 
