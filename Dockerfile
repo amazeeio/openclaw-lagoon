@@ -53,9 +53,10 @@ COPY .lagoon/fix-permissions /bin/fix-permissions
 COPY .lagoon/entrypoints.sh /lagoon/entrypoints.sh
 COPY .lagoon/bashrc /home/.bashrc
 COPY .lagoon/polydock_claim.sh /lagoon/polydock_claim.sh
+COPY .lagoon/polydock_post_deploy.sh /lagoon/polydock_post_deploy.sh
 
 # Make scripts executable and set up proper permissions for non-root users
-RUN chmod +x /bin/fix-permissions /lagoon/entrypoints.sh /lagoon/polydock_claim.sh && \
+RUN chmod +x /bin/fix-permissions /lagoon/entrypoints.sh /lagoon/polydock_claim.sh /lagoon/polydock_post_deploy.sh && \
     fix-permissions /home
 
 # Copy Lagoon entrypoint scripts
