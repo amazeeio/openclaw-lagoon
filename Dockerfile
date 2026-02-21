@@ -81,6 +81,7 @@ RUN mkdir -p /home/.openclaw /home/.openclaw/npm \
 ENV NODE_ENV=production \
     HOME=/home \
     OPENCLAW_GATEWAY_PORT=3000 \
+    OPENCLAW_NO_RESPAWN=true \
     XDG_DATA_HOME=/home/.openclaw/.local/share/ \
     PNPM_HOME=/home/.openclaw/.local/share/pnpm \
     npm_config_cache=/tmp/.npm \
