@@ -25,8 +25,10 @@ try {
 config.gateway = config.gateway || {};
 config.gateway.controlUi = config.gateway.controlUi || {};
 config.gateway.controlUi.dangerouslyDisableDeviceAuth = true;
+config.gateway.controlUi.allowedOrigins = ['http://localhost:3000'];
 
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 console.log('[polydock-post-deploy] Ensured gateway.controlUi.dangerouslyDisableDeviceAuth = true');
+console.log('[polydock-post-deploy] Ensured gateway.controlUi.allowedOrigins = ["http://localhost:3000"]');
 console.log('[polydock-post-deploy] Configuration saved to:', configPath);
 EOFNODE
