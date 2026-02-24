@@ -2,6 +2,17 @@
 
 # Build the same OpenClaw dashboard URL as .lagoon/50-shell-config.sh
 # and print only the URL (required by Polydock claim command parsing).
+#
+# Why we refresh config here:
+# - Claim may be executed with environment variables injected at runtime
+#   (for example via kubectl exec / Polydock labels).
+# - Those variables are only present in this claim process and are NOT injected
+#   into the already-running OpenClaw gateway process environment.
+# - 60-amazeeai-config.sh reads the current env and writes resolved values into
+#   /home/.openclaw/openclaw.json.
+# - Running it here materializes the latest claim-time values (like
+#   AMAZEEAI_API_KEY / AMAZEEAI_DEFAULT_MODEL) without restarting the container.
+# - Keep this script output to URL-only so Polydock claim parsing remains stable.
 
 # Refresh OpenClaw config so claim-time environment labels (for example
 # AMAZEEAI_* variables) are materialized into openclaw.json before URL output.
