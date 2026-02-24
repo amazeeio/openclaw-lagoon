@@ -93,10 +93,10 @@ async function discoverModels() {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    const response = await fetch(`${baseUrl}/v1/models`, { headers });
+    const response = await fetch(`${baseUrl}/v1/model/info`, { headers });
 
     if (!response.ok) {
-      console.error(`[amazeeai-config] Failed to fetch models: ${response.status} ${response.statusText}`);
+      console.error(`[amazeeai-config] Failed to fetch model info: ${response.status} ${response.statusText}`);
       return;
     }
 
@@ -112,24 +112,63 @@ async function discoverModels() {
       return;
     }
 
-    console.log(`[amazeeai-config] Discovered ${data.data.length} models:`);
+    console.log(`[amazeeai-config] Discovered ${data.data.length} models from /v1/model/info:`);
     for (const m of data.data) {
-      const id = m.id || m.model || '(unknown)';
-      const ownedBy = m.owned_by ? ` (${m.owned_by})` : '';
-      console.log(`[amazeeai-config]   - ${id}${ownedBy}`);
+      const id = m.model_name || m.model_info?.key || m.litellm_params?.model || '(unknown)';
+      console.log(`[amazeeai-config]   - ${id}`);
     }
 
-    // Transform models to OpenClaw format
+    const toNumberOr = (value, fallback) => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+      return fallback;
+    };
+
+    const isReasoningModel = (modelName, info) => {
+      if (info?.supports_reasoning === true) {
+        return true;
+      }
+      const supportedParams = Array.isArray(info?.supported_openai_params) ? info.supported_openai_params : [];
+      if (supportedParams.includes('thinking') || supportedParams.includes('reasoning_effort')) {
+        return true;
+      }
+      return false;
+    };
+
+    const deriveInputTypes = (info) => {
+      const mode = info?.mode;
+      const inputTypes = ['text'];
+      if (mode === 'embedding') {
+        return inputTypes;
+      }
+      if (info?.supports_vision === true) {
+        inputTypes.push('image');
+      }
+      return inputTypes;
+    };
+
+    // Transform models to OpenClaw format from /v1/model/info payload
     const models = data.data.map(m => {
-      const id = m.id || m.model || '';
+      const info = m.model_info || {};
+      const modelName = m.model_name || info.key || m.litellm_params?.model || '';
+
+      const contextWindow = toNumberOr(info.max_input_tokens, toNumberOr(info.max_tokens, 128000));
+      const maxTokens = toNumberOr(info.max_output_tokens, toNumberOr(info.max_tokens, 4096));
+
       return {
-        id,
-        name: id,
-        reasoning: /reasoning|thinking|o1|o3/i.test(id),
-        input: ['text'],
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-        contextWindow: 128000,
-        maxTokens: 4096,
+        id: modelName,
+        name: modelName,
+        reasoning: isReasoningModel(modelName, info),
+        input: deriveInputTypes(info),
+        cost: {
+          input: toNumberOr(info.input_cost_per_token, 0),
+          output: toNumberOr(info.output_cost_per_token, 0),
+          cacheRead: toNumberOr(info.cache_read_input_token_cost, 0),
+          cacheWrite: toNumberOr(info.cache_creation_input_token_cost, 0),
+        },
+        contextWindow,
+        maxTokens,
       };
     }).filter(m => m.id);
 
@@ -154,29 +193,23 @@ async function discoverModels() {
     config.models.providers.amazeeai = providerConfig;
     console.log('[amazeeai-config] Added amazeeai provider with', models.length, 'models');
 
-    // Add models to the allowlist for /model picker
-    config.agents.defaults.models = config.agents.defaults.models || {};
+    // Replace allowlist for /model picker with discovered models only.
+    // This removes stale model entries from previous runs.
+    const discoveredAllowlist = {};
     for (const model of models) {
-      const key = `amazeeai/${model.id}`;
-      if (!config.agents.defaults.models[key]) {
-        config.agents.defaults.models[key] = {};
-      }
+      discoveredAllowlist[`amazeeai/${model.id}`] = {};
     }
+    config.agents.defaults.models = discoveredAllowlist;
 
     // If AMAZEEAI_DEFAULT_MODEL is set, force it as primary model.
     // If not set, leave default model config untouched.
     const modelIds = models.map(m => m.id);
     if (defaultModel) {
       const requestedPrimaryModel = `amazeeai/${defaultModel}`;
-      config.agents.defaults.model.primary = requestedPrimaryModel;
-      console.log('[amazeeai-config] Set default primary model from AMAZEEAI_DEFAULT_MODEL:', requestedPrimaryModel);
-
-      if (!config.agents.defaults.models[requestedPrimaryModel]) {
-        config.agents.defaults.models[requestedPrimaryModel] = {};
-        console.log('[amazeeai-config] Added default model to allowlist:', requestedPrimaryModel);
-      }
-
-      if (!modelIds.includes(defaultModel)) {
+      if (modelIds.includes(defaultModel)) {
+        config.agents.defaults.model.primary = requestedPrimaryModel;
+        console.log('[amazeeai-config] Set default primary model from AMAZEEAI_DEFAULT_MODEL:', requestedPrimaryModel);
+      } else {
         console.warn(`[amazeeai-config] Warning: AMAZEEAI_DEFAULT_MODEL "${defaultModel}" not found in discovered models`);
         console.warn('[amazeeai-config] Available models:', modelIds.join(', '));
       }
@@ -251,6 +284,39 @@ function configureChannels() {
   }
 }
 
+function sanitizeModelInputs() {
+  const allowedInputs = new Set(['text', 'image']);
+  const providers = config.models?.providers;
+  if (!providers || typeof providers !== 'object') {
+    return;
+  }
+
+  let sanitizedCount = 0;
+  for (const provider of Object.values(providers)) {
+    if (!provider || !Array.isArray(provider.models)) {
+      continue;
+    }
+    for (const model of provider.models) {
+      const originalInput = Array.isArray(model.input) ? model.input : ['text'];
+      const sanitizedInput = originalInput.filter(value => allowedInputs.has(value));
+      const uniqueInput = Array.from(new Set(sanitizedInput));
+      const finalInput = uniqueInput.length > 0 ? uniqueInput : ['text'];
+
+      const changed = finalInput.length !== originalInput.length
+        || finalInput.some((value, idx) => value !== originalInput[idx]);
+
+      if (changed) {
+        model.input = finalInput;
+        sanitizedCount += 1;
+      }
+    }
+  }
+
+  if (sanitizedCount > 0) {
+    console.log(`[amazeeai-config] Sanitized input types for ${sanitizedCount} model(s) to OpenClaw-supported values`);
+  }
+}
+
 // ============================================================
 // MAIN
 // ============================================================
@@ -258,6 +324,7 @@ async function main() {
   await discoverModels();
   configureGatewayToken();
   configureChannels();
+  sanitizeModelInputs();
 
   // Write updated config
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
