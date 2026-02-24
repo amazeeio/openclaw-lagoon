@@ -3,6 +3,16 @@
 # Build the same OpenClaw dashboard URL as .lagoon/50-shell-config.sh
 # and print only the URL (required by Polydock claim command parsing).
 
+# Refresh OpenClaw config so claim-time environment labels (for example
+# AMAZEEAI_* variables) are materialized into openclaw.json before URL output.
+__oc_refresh_config() {
+  if [ -r /lagoon/entrypoints/60-amazeeai-config.sh ]; then
+    /bin/sh /lagoon/entrypoints/60-amazeeai-config.sh >/dev/null 2>&1 || true
+  fi
+}
+
+__oc_refresh_config
+
 # Helper to get gateway token (from env var or config file)
 __oc_get_token() {
   # First check environment variable

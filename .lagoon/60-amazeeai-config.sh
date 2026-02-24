@@ -139,7 +139,8 @@ async function discoverModels() {
     }
 
     // Configure the amazeeai provider
-    // baseUrl is injected directly, apiKey uses env var reference for security
+    // baseUrl and apiKey are injected directly so runtime refresh scripts can
+    // materialize claim-time environment labels into openclaw.json.
     const providerConfig = {
       baseUrl: baseUrl,
       api: 'openai-completions',
@@ -147,7 +148,7 @@ async function discoverModels() {
     };
 
     if (apiKey) {
-      providerConfig.apiKey = '${AMAZEEAI_API_KEY}';
+      providerConfig.apiKey = apiKey;
     }
 
     config.models.providers.amazeeai = providerConfig;
