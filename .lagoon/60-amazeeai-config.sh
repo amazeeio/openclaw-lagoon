@@ -30,10 +30,9 @@ const configTemplate = {
   gateway: {
     port: gatewayPort,
     mode: 'local',
-    bind: 'loopback',
     controlUi: {
-      dangerouslyAllowHostHeaderOriginFallback: true,
-    }
+      allowedOrigins: ['*'],
+    },
   }
 };
 
@@ -75,15 +74,13 @@ if (!config.gateway.port) {
 if (!config.gateway.mode) {
   config.gateway.mode = 'local';
 }
-if (!config.gateway.bind) {
-  config.gateway.bind = 'loopback';
-}
 if (!config.gateway.controlUi) {
   config.gateway.controlUi = {};
 }
-if (!config.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback) {
-  config.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback = true;
+if (!Array.isArray(config.gateway.controlUi.allowedOrigins) || config.gateway.controlUi.allowedOrigins.length === 0) {
+  config.gateway.controlUi.allowedOrigins = ['*'];
 }
+
 
 
 // ============================================================
