@@ -29,7 +29,11 @@ const configTemplate = {
   },
   gateway: {
     port: gatewayPort,
-    mode: 'local'
+    mode: 'local',
+    bind: 'loopback',
+    controlUi: {
+      dangerouslyAllowHostHeaderOriginFallback: true,
+    }
   }
 };
 
@@ -71,6 +75,16 @@ if (!config.gateway.port) {
 if (!config.gateway.mode) {
   config.gateway.mode = 'local';
 }
+if (!config.gateway.bind) {
+  config.gateway.bind = 'loopback';
+}
+if (!config.gateway.controlUi) {
+  config.gateway.controlUi = {};
+}
+if (!config.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback) {
+  config.gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback = true;
+}
+
 
 // ============================================================
 // AMAZEEAI MODEL DISCOVERY
