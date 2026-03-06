@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y \
     git \
     bash \
     curl \
+    nano \
     openssh-client \
     python3 \
     python3-pip \
