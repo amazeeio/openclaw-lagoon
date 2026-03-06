@@ -27,6 +27,9 @@ const configTemplate = {
       workspace: process.env.OPENCLAW_WORKSPACE || '/home/.openclaw/workspace'
     }
   },
+  tools: {
+    profile: 'full',
+  },
   gateway: {
     port: gatewayPort,
     mode: 'local',
@@ -59,8 +62,14 @@ config.agents.defaults = config.agents.defaults || {};
 config.agents.defaults.model = config.agents.defaults.model || {};
 config.models = config.models || {};
 config.models.providers = config.models.providers || {};
+config.tools = config.tools || {};
 config.gateway = config.gateway || {};
 config.channels = config.channels || {};
+
+if (!config.tools.profile) {
+  config.tools.profile = 'full';
+  console.log('[amazeeai-config] Set tools.profile to default value: full');
+}
 
 // Ensure required base fields from template are present
 // OpenClaw needs these to start properly
