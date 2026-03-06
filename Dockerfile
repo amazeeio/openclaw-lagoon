@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 # Install openclaw globally, skipping postinstall scripts that build native code
 # This disables local LLM support (node-llama-cpp) but works fine with API providers like amazeeai
-ARG OPENCLAW_VERSION=2026.2.12
+ARG OPENCLAW_VERSION=2026.3.2
 RUN npm install -g --ignore-scripts openclaw@${OPENCLAW_VERSION}
 
 # Verify installation
@@ -34,10 +34,20 @@ RUN apt-get update && apt-get install -y \
     curl \
     openssh-client \
     python3 \
+    python3-pip \
+    python3-venv \
     jq \
     procps \
     $EXTRA_APT_PACKAGES \
     && rm -rf /var/lib/apt/lists/*
+
+# Some tools execute commands through /bin/sh; point it to bash so
+# "source ..." works consistently in non-interactive command execution.
+RUN ln -sf /bin/bash /bin/sh
+
+# Create the runtime user
+RUN groupadd --gid 10000 openclaw && \
+    useradd --uid 10000 --gid 0 --groups openclaw --home-dir /home --shell /bin/bash --no-create-home openclaw
 
 # Create Lagoon directory structure
 RUN mkdir -p /lagoon/entrypoints /lagoon/bin /home
@@ -46,9 +56,11 @@ RUN mkdir -p /lagoon/entrypoints /lagoon/bin /home
 COPY .lagoon/fix-permissions /bin/fix-permissions
 COPY .lagoon/entrypoints.sh /lagoon/entrypoints.sh
 COPY .lagoon/bashrc /home/.bashrc
+COPY .lagoon/polydock_claim.sh /lagoon/polydock_claim.sh
+COPY .lagoon/polydock_post_deploy.sh /lagoon/polydock_post_deploy.sh
 
 # Make scripts executable and set up proper permissions for non-root users
-RUN chmod +x /bin/fix-permissions /lagoon/entrypoints.sh && \
+RUN chmod +x /bin/fix-permissions /lagoon/entrypoints.sh /lagoon/polydock_claim.sh /lagoon/polydock_post_deploy.sh && \
     fix-permissions /home
 
 # Copy Lagoon entrypoint scripts
@@ -69,6 +81,7 @@ RUN mkdir -p /home/.openclaw /home/.openclaw/npm \
 ENV NODE_ENV=production \
     HOME=/home \
     OPENCLAW_GATEWAY_PORT=3000 \
+    OPENCLAW_NO_RESPAWN=true \
     XDG_DATA_HOME=/home/.openclaw/.local/share/ \
     PNPM_HOME=/home/.openclaw/.local/share/pnpm \
     npm_config_cache=/tmp/.npm \

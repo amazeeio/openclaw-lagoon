@@ -1,4 +1,4 @@
 # Local env: never commit secrets
-.env
+.env*
 
-.local
+.local*
