@@ -34,7 +34,7 @@ const configTemplate = {
     port: gatewayPort,
     mode: 'local',
     controlUi: {
-      allowedOrigins: ['*'],
+      allowedOrigins: ['http://localhost:3000', 'https://alpha.amazeeclaw.amazee.ai'],
     },
   }
 };
@@ -86,9 +86,37 @@ if (!config.gateway.mode) {
 if (!config.gateway.controlUi) {
   config.gateway.controlUi = {};
 }
-if (!Array.isArray(config.gateway.controlUi.allowedOrigins) || config.gateway.controlUi.allowedOrigins.length === 0) {
-  config.gateway.controlUi.allowedOrigins = ['*'];
-}
+
+// Always set allowed origins at startup to ensure secure defaults are enforced.
+const parseLagoonRoutes = (rawRoutes) => {
+  if (!rawRoutes || typeof rawRoutes !== 'string') {
+    return [];
+  }
+
+  return rawRoutes
+    .split(',')
+    .map(route => route.trim())
+    .filter(Boolean)
+    .map(route => route.replace(/\/+$/, ''))
+    .map(route => {
+      if (/^https?:\/\//i.test(route)) {
+        return route;
+      }
+      return `https://${route}`;
+    });
+};
+
+const fixedAllowedOrigins = [
+  'http://localhost:3000',
+  'https://alpha.amazeeclaw.amazee.ai',
+];
+
+const lagoonRouteOrigins = parseLagoonRoutes(process.env.LAGOON_ROUTES || '');
+config.gateway.controlUi.allowedOrigins = Array.from(new Set([
+  ...fixedAllowedOrigins,
+  ...lagoonRouteOrigins,
+]));
+console.log('[amazeeai-config] Set gateway.controlUi.allowedOrigins to:', config.gateway.controlUi.allowedOrigins.join(', '));
 
 
 
