@@ -87,6 +87,7 @@ ENV NODE_ENV=production \
     PNPM_HOME=/home/.openclaw/.local/share/pnpm \
     npm_config_cache=/tmp/.npm \
     npm_config_prefix=/home/.openclaw/npm \
+    NODE_COMPILE_CACHE=/tmp/openclaw-compile-cache \
     PATH="/home/.openclaw/npm/bin:/home/.openclaw/.local/share/pnpm:$PATH" \
     LAGOON=openclaw \
     TMPDIR=/tmp \
