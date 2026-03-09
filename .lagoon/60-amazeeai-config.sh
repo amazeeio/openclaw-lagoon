@@ -323,6 +323,43 @@ async function discoverModels() {
   }
 }
 
+function hasAmazeeaiEmbeddingsModel() {
+  const models = config.models?.providers?.amazeeai?.models;
+  if (!Array.isArray(models) || models.length === 0) {
+    return false;
+  }
+
+  return models.some(model => {
+    const mode = String(model?.mode || model?.type || '').toLowerCase();
+    if (mode === 'embedding' || mode === 'embeddings') {
+      return true;
+    }
+
+    const idAndName = `${model?.id || ''} ${model?.name || ''}`.toLowerCase();
+    return /\bembed(ding|dings)?\b/.test(idAndName);
+  });
+}
+
+function configureMemorySearchRemoteFromAmazeeai() {
+  if (!hasAmazeeaiEmbeddingsModel()) {
+    console.warn('[amazeeai-config] Skipping memorySearch remote override: embeddings model not found in amazeeai provider');
+    return;
+  }
+
+  // Configure remote memory-search embeddings from amazee.ai env vars.
+  // These values are intentionally overwritten on each run.
+  const memorySearchBaseUrl = (process.env.AMAZEEAI_BASE_URL || '').replace(/\/+$/, '');
+  const memorySearchApiKey = process.env.AMAZEEAI_API_KEY || '';
+  config.agents.defaults.memorySearch = config.agents.defaults.memorySearch || {};
+  config.agents.defaults.memorySearch.provider = 'openai';
+  config.agents.defaults.memorySearch.model = 'embeddings';
+  config.agents.defaults.memorySearch.remote = {
+    baseUrl: memorySearchBaseUrl ? `${memorySearchBaseUrl}/v1/` : '',
+    apiKey: memorySearchApiKey,
+  };
+  console.log('[amazeeai-config] Configured memorySearch for amazee.ai embeddings model');
+}
+
 // ============================================================
 // GATEWAY TOKEN CONFIGURATION
 // ============================================================
@@ -423,6 +460,7 @@ function sanitizeModelInputs() {
 // ============================================================
 async function main() {
   await discoverModels();
+  configureMemorySearchRemoteFromAmazeeai();
   configureGatewayToken();
   configureChannels();
   sanitizeModelInputs();
