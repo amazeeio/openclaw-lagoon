@@ -60,6 +60,7 @@ try {
 config.agents = config.agents || {};
 config.agents.defaults = config.agents.defaults || {};
 config.agents.defaults.model = config.agents.defaults.model || {};
+config.agents.defaults.compaction = config.agents.defaults.compaction || {};
 config.models = config.models || {};
 config.models.providers = config.models.providers || {};
 config.tools = config.tools || {};
@@ -77,6 +78,45 @@ if (!config.agents.defaults.workspace) {
   config.agents.defaults.workspace = process.env.OPENCLAW_WORKSPACE || '/home/.openclaw/workspace';
   console.log('[amazeeai-config] Set default workspace:', config.agents.defaults.workspace);
 }
+
+// Initialize compaction memory flush defaults only when not already configured.
+if (!config.agents.defaults.compaction.memoryFlush) {
+  config.agents.defaults.compaction.reserveTokensFloor = 20000;
+  config.agents.defaults.compaction.memoryFlush = {
+    enabled: true,
+    softThresholdTokens: 40000,
+    prompt: 'Pre-compaction memory flush. Store durable memories now in memory/YYYY-MM-DD.md (create memory/ if needed). If the file already exists, APPEND only and do not overwrite existing entries. Do not create timestamped variant files (for example, YYYY-MM-DD-HHMM.md); always use the canonical YYYY-MM-DD.md filename. Capture only lasting notes: key decisions made, current project status, lessons learned, and active blockers. If there is nothing durable to store, reply with NO_REPLY.'
+  };
+  console.log('[amazeeai-config] Initialized compaction memory flush defaults');
+} else {
+  console.log('[amazeeai-config] Existing compaction memory flush config detected; leaving unchanged');
+}
+
+// Initialize context pruning defaults only when not already configured.
+if (!config.agents.defaults.contextPruning) {
+  config.agents.defaults.contextPruning = {
+    mode: 'cache-ttl',
+    ttl: '6h',
+    keepLastAssistants: 3,
+  };
+  console.log('[amazeeai-config] Initialized context pruning defaults');
+} else {
+  console.log('[amazeeai-config] Existing context pruning config detected; leaving unchanged');
+}
+
+// Initialize memory search defaults only when not already configured.
+if (!config.agents.defaults.memorySearch) {
+  config.agents.defaults.memorySearch = {
+    experimental: {
+      sessionMemory: true,
+    },
+    sources: ['memory', 'sessions'],
+  };
+  console.log('[amazeeai-config] Initialized memory search defaults');
+} else {
+  console.log('[amazeeai-config] Existing memory search config detected; leaving unchanged');
+}
+
 if (!config.gateway.port) {
   config.gateway.port = gatewayPort;
 }
