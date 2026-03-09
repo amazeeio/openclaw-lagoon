@@ -51,7 +51,18 @@ try {
     console.log('[amazeeai-config] No existing config found, initializing from template');
   }
 } catch (e) {
-  // Config file exists but is invalid - start from template
+  // Config file exists but is invalid - back it up, then start from template.
+  if (fs.existsSync(configPath)) {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupPath = `${configPath}.parse-error-${timestamp}.bak`;
+      fs.copyFileSync(configPath, backupPath);
+      console.log('[amazeeai-config] Backed up invalid config to:', backupPath);
+    } catch (backupError) {
+      console.warn('[amazeeai-config] Failed to back up invalid config:', backupError.message);
+    }
+  }
+
   console.log('[amazeeai-config] Config parse error, reinitializing from template:', e.message);
   config = JSON.parse(JSON.stringify(configTemplate));
 }
