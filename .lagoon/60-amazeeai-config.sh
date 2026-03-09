@@ -117,6 +117,19 @@ if (!config.agents.defaults.memorySearch) {
   console.log('[amazeeai-config] Existing memory search config detected; leaving unchanged');
 }
 
+// Initialize memory search hybrid query defaults only when not already configured.
+if (!config.agents.defaults.memorySearch.query?.hybrid) {
+  config.agents.defaults.memorySearch.query = config.agents.defaults.memorySearch.query || {};
+  config.agents.defaults.memorySearch.query.hybrid = {
+    enabled: true,
+    vectorWeight: 0.7,
+    textWeight: 0.3,
+  };
+  console.log('[amazeeai-config] Initialized memory search hybrid query defaults');
+} else {
+  console.log('[amazeeai-config] Existing memory search hybrid query config detected; leaving unchanged');
+}
+
 if (!config.gateway.port) {
   config.gateway.port = gatewayPort;
 }
