@@ -57,6 +57,7 @@ RUN mkdir -p /lagoon/entrypoints /lagoon/bin /home
 COPY .lagoon/fix-permissions /bin/fix-permissions
 COPY .lagoon/entrypoints.sh /lagoon/entrypoints.sh
 COPY .lagoon/bashrc /home/.bashrc
+COPY .lagoon/amazeeai-bootstrap /lagoon/amazeeai-bootstrap
 COPY .lagoon/polydock_claim.sh /lagoon/polydock_claim.sh
 COPY .lagoon/polydock_post_deploy.sh /lagoon/polydock_post_deploy.sh
 

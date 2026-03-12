@@ -12,6 +12,10 @@ const path = require('path');
 // Config paths - use OPENCLAW_STATE_DIR if set, otherwise default to home directory
 const stateDir = process.env.OPENCLAW_STATE_DIR || path.join(process.env.HOME || '/home', '.openclaw');
 const configPath = path.join(stateDir, 'openclaw.json');
+const workspaceDir = process.env.OPENCLAW_WORKSPACE || '/home/.openclaw/workspace';
+const bundledBootstrapSourceDir = '/lagoon/amazeeai-bootstrap';
+const bundledAmazeeBootstrapRelativePath = path.join('amazee', 'AGENTS.md');
+const bundledAmazeeBootstrapTargetPath = path.join(workspaceDir, bundledAmazeeBootstrapRelativePath);
 
 console.log('[amazeeai-config] Config path:', configPath);
 
@@ -77,6 +81,9 @@ config.models.providers = config.models.providers || {};
 config.tools = config.tools || {};
 config.gateway = config.gateway || {};
 config.channels = config.channels || {};
+config.hooks = config.hooks || {};
+config.hooks.internal = config.hooks.internal || {};
+config.hooks.internal.entries = config.hooks.internal.entries || {};
 
 if (!config.tools.profile) {
   config.tools.profile = 'full';
@@ -86,8 +93,30 @@ if (!config.tools.profile) {
 // Ensure required base fields from template are present
 // OpenClaw needs these to start properly
 if (!config.agents.defaults.workspace) {
-  config.agents.defaults.workspace = process.env.OPENCLAW_WORKSPACE || '/home/.openclaw/workspace';
+  config.agents.defaults.workspace = workspaceDir;
   console.log('[amazeeai-config] Set default workspace:', config.agents.defaults.workspace);
+}
+
+function ensureBundledBootstrapFiles() {
+  const sourcePath = path.join(bundledBootstrapSourceDir, 'AGENTS.md');
+
+  if (!fs.existsSync(sourcePath)) {
+    console.warn('[amazeeai-config] Bundled bootstrap source not found:', sourcePath);
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(bundledAmazeeBootstrapTargetPath), { recursive: true });
+  fs.copyFileSync(sourcePath, bundledAmazeeBootstrapTargetPath);
+  console.log('[amazeeai-config] Seeded extra bootstrap file:', bundledAmazeeBootstrapTargetPath);
+}
+
+function configureExtraBootstrapHooks() {
+  config.hooks.internal.enabled = true;
+  config.hooks.internal.entries['bootstrap-extra-files'] = {
+    enabled: true,
+    paths: [bundledAmazeeBootstrapRelativePath],
+  };
+  console.log('[amazeeai-config] Enabled hooks.internal.entries.bootstrap-extra-files');
 }
 
 // Initialize compaction memory flush defaults only when not already configured.
@@ -470,10 +499,12 @@ function sanitizeModelInputs() {
 // MAIN
 // ============================================================
 async function main() {
+  ensureBundledBootstrapFiles();
   await discoverModels();
   configureMemorySearchRemoteFromAmazeeai();
   configureGatewayToken();
   configureChannels();
+  configureExtraBootstrapHooks();
   sanitizeModelInputs();
 
   // Write updated config
