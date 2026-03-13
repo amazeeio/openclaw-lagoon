@@ -211,7 +211,8 @@ Create a new Slack app from a manifest using the following configuration. **Impo
 **2. Generate Tokens**
 
 After creating your Slack app:
-- Generate an **App-Level Token** (starts with `xapp-`)
+- Configure the app with the basics like a color, bot icon, and description
+- On the "Basic Information" tab, generate an **App-Level Token** with scope "connections:write" (the token starts with `xapp-`)
 - Install the app to your workspace to get the **Bot User OAuth Token** (starts with `xoxb-`)
 
 **3. Configure Lagoon Environment Variables**
@@ -229,9 +230,23 @@ Redeploy your Lagoon project with the new environment variables. OpenClaw will a
 
 **5. Test Your Bot**
 
-Once deployed, you can send it a direct message. As with the WebUI you need to approve the pairing via the lagoon ssh connection.
+Once deployed, you can send it a direct message. Using the WebUI, you can ask your bot to confirm Slack is ready to roll.
 
-If you want to use the Bot in channel, you need to add it to the chanel and enable the chanel via telling it to enable it through a direct message. See the official [official OpenClaw Slack documentation](https://docs.openclaw.ai/channels/slack) for more information.
+Heads up, as with the WebUI you will need to approve the pairing. Once you have confirmed the Slack integration is running using the WebUI chat, your can send a DM on Slack, and you'll get an authorization code and instructions to run in the terminal using the lagoon ssh connection as before.
+
+First shell into your lagoon project as before..
+
+```bash
+lagoon ssh -p [projectname] -e [environmentname] -s openclaw-gateway
+```
+
+Next you can approve your connection based on the code the bot provided you in the Slack message.
+
+```bash
+openclaw pairing approve slack <code>
+```
+
+If you want to use the Bot in channel, you need to add it to the channel and enable the channel via telling it to enable it through a direct message. See the official [official OpenClaw Slack documentation](https://docs.openclaw.ai/channels/slack) for more information.
 
 ## Git Repository Access (Optional)
 
@@ -296,6 +311,17 @@ SSH_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA...
 After adding the environment variable, redeploy your Lagoon project. The container will automatically inject the SSH key, allowing OpenClaw to perform Git operations.
 
 To verify the setup, ask OpenClaw to clone a repository or check Git access through the chat interface.
+
+## Setting up Brave for Web Search (Optional)
+
+If you want OpenClaw to search the web using Brave, you're going to need a Brave API key.
+
+If you don't already have a Brave account, head over to http://brave.com/search/api/ and click "Get Started". Following the standard signup steps, and be sure to register for at least a "Free" account. Note, you will need a credit card with at least 1 USD available to get the Free tier going.
+
+Once you have a Brave account, head over to https://api-dashboard.search.brave.com/app/keys and create an API Key. Copy the new key, and create a Lagoon variable called "BRAVE_API_KEY" as you did before.
+
+Redploy your Lagoon project to get rolling with search.
+
 
 ## Local Development
 
