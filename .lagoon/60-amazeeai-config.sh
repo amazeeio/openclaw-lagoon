@@ -12,6 +12,10 @@ const path = require('path');
 // Config paths - use OPENCLAW_STATE_DIR if set, otherwise default to home directory
 const stateDir = process.env.OPENCLAW_STATE_DIR || path.join(process.env.HOME || '/home', '.openclaw');
 const configPath = path.join(stateDir, 'openclaw.json');
+const workspaceDir = process.env.OPENCLAW_WORKSPACE || '/home/.openclaw/workspace';
+const bundledBootstrapSourceDir = '/lagoon/amazeeai-bootstrap';
+const bundledAmazeeBootstrapRelativePath = path.join('amazee', 'AGENTS.md');
+const bundledAmazeeBootstrapTargetPath = path.join(workspaceDir, bundledAmazeeBootstrapRelativePath);
 
 console.log('[amazeeai-config] Config path:', configPath);
 
@@ -27,11 +31,14 @@ const configTemplate = {
       workspace: process.env.OPENCLAW_WORKSPACE || '/home/.openclaw/workspace'
     }
   },
+  tools: {
+    profile: 'full',
+  },
   gateway: {
     port: gatewayPort,
     mode: 'local',
     controlUi: {
-      allowedOrigins: ['*'],
+      allowedOrigins: ['http://localhost:3000', 'https://alpha.amazeeclaw.amazee.ai'],
     },
   }
 };
@@ -48,7 +55,18 @@ try {
     console.log('[amazeeai-config] No existing config found, initializing from template');
   }
 } catch (e) {
-  // Config file exists but is invalid - start from template
+  // Config file exists but is invalid - back it up, then start from template.
+  if (fs.existsSync(configPath)) {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupPath = `${configPath}.parse-error-${timestamp}.bak`;
+      fs.copyFileSync(configPath, backupPath);
+      console.log('[amazeeai-config] Backed up invalid config to:', backupPath);
+    } catch (backupError) {
+      console.warn('[amazeeai-config] Failed to back up invalid config:', backupError.message);
+    }
+  }
+
   console.log('[amazeeai-config] Config parse error, reinitializing from template:', e.message);
   config = JSON.parse(JSON.stringify(configTemplate));
 }
@@ -57,17 +75,101 @@ try {
 config.agents = config.agents || {};
 config.agents.defaults = config.agents.defaults || {};
 config.agents.defaults.model = config.agents.defaults.model || {};
+config.agents.defaults.compaction = config.agents.defaults.compaction || {};
 config.models = config.models || {};
 config.models.providers = config.models.providers || {};
+config.tools = config.tools || {};
 config.gateway = config.gateway || {};
 config.channels = config.channels || {};
+config.hooks = config.hooks || {};
+config.hooks.internal = config.hooks.internal || {};
+config.hooks.internal.entries = config.hooks.internal.entries || {};
+
+if (!config.tools.profile) {
+  config.tools.profile = 'full';
+  console.log('[amazeeai-config] Set tools.profile to default value: full');
+}
 
 // Ensure required base fields from template are present
 // OpenClaw needs these to start properly
 if (!config.agents.defaults.workspace) {
-  config.agents.defaults.workspace = process.env.OPENCLAW_WORKSPACE || '/home/.openclaw/workspace';
+  config.agents.defaults.workspace = workspaceDir;
   console.log('[amazeeai-config] Set default workspace:', config.agents.defaults.workspace);
 }
+
+function ensureBundledBootstrapFiles() {
+  const sourcePath = path.join(bundledBootstrapSourceDir, 'AGENTS.md');
+
+  if (!fs.existsSync(sourcePath)) {
+    console.warn('[amazeeai-config] Bundled bootstrap source not found:', sourcePath);
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(bundledAmazeeBootstrapTargetPath), { recursive: true });
+  fs.copyFileSync(sourcePath, bundledAmazeeBootstrapTargetPath);
+  console.log('[amazeeai-config] Seeded extra bootstrap file:', bundledAmazeeBootstrapTargetPath);
+}
+
+function configureExtraBootstrapHooks() {
+  config.hooks.internal.enabled = true;
+  config.hooks.internal.entries['bootstrap-extra-files'] = {
+    enabled: true,
+    paths: [bundledAmazeeBootstrapRelativePath],
+  };
+  console.log('[amazeeai-config] Enabled hooks.internal.entries.bootstrap-extra-files');
+}
+
+// Initialize compaction memory flush defaults only when not already configured.
+if (!config.agents.defaults.compaction.memoryFlush) {
+  config.agents.defaults.compaction.reserveTokensFloor = 20000;
+  config.agents.defaults.compaction.memoryFlush = {
+    enabled: true,
+    softThresholdTokens: 40000,
+    prompt: 'Pre-compaction memory flush. Store durable memories now in memory/YYYY-MM-DD.md (create memory/ if needed). If the file already exists, APPEND only and do not overwrite existing entries. Do not create timestamped variant files (for example, YYYY-MM-DD-HHMM.md); always use the canonical YYYY-MM-DD.md filename. Capture only lasting notes: key decisions made, current project status, lessons learned, and active blockers. If there is nothing durable to store, reply with NO_REPLY.'
+  };
+  console.log('[amazeeai-config] Initialized compaction memory flush defaults');
+} else {
+  console.log('[amazeeai-config] Existing compaction memory flush config detected; leaving unchanged');
+}
+
+// Initialize context pruning defaults only when not already configured.
+if (!config.agents.defaults.contextPruning) {
+  config.agents.defaults.contextPruning = {
+    mode: 'cache-ttl',
+    ttl: '6h',
+    keepLastAssistants: 3,
+  };
+  console.log('[amazeeai-config] Initialized context pruning defaults');
+} else {
+  console.log('[amazeeai-config] Existing context pruning config detected; leaving unchanged');
+}
+
+// Initialize memory search defaults only when not already configured.
+if (!config.agents.defaults.memorySearch) {
+  config.agents.defaults.memorySearch = {
+    experimental: {
+      sessionMemory: true,
+    },
+    sources: ['memory', 'sessions'],
+  };
+  console.log('[amazeeai-config] Initialized memory search defaults');
+} else {
+  console.log('[amazeeai-config] Existing memory search config detected; leaving unchanged');
+}
+
+// Initialize memory search hybrid query defaults only when not already configured.
+if (!config.agents.defaults.memorySearch.query?.hybrid) {
+  config.agents.defaults.memorySearch.query = config.agents.defaults.memorySearch.query || {};
+  config.agents.defaults.memorySearch.query.hybrid = {
+    enabled: true,
+    vectorWeight: 0.7,
+    textWeight: 0.3,
+  };
+  console.log('[amazeeai-config] Initialized memory search hybrid query defaults');
+} else {
+  console.log('[amazeeai-config] Existing memory search hybrid query config detected; leaving unchanged');
+}
+
 if (!config.gateway.port) {
   config.gateway.port = gatewayPort;
 }
@@ -77,9 +179,37 @@ if (!config.gateway.mode) {
 if (!config.gateway.controlUi) {
   config.gateway.controlUi = {};
 }
-if (!Array.isArray(config.gateway.controlUi.allowedOrigins) || config.gateway.controlUi.allowedOrigins.length === 0) {
-  config.gateway.controlUi.allowedOrigins = ['*'];
-}
+
+// Always set allowed origins at startup to ensure secure defaults are enforced.
+const parseLagoonRoutes = (rawRoutes) => {
+  if (!rawRoutes || typeof rawRoutes !== 'string') {
+    return [];
+  }
+
+  return rawRoutes
+    .split(',')
+    .map(route => route.trim())
+    .filter(Boolean)
+    .map(route => route.replace(/\/+$/, ''))
+    .map(route => {
+      if (/^https?:\/\//i.test(route)) {
+        return route;
+      }
+      return `https://${route}`;
+    });
+};
+
+const fixedAllowedOrigins = [
+  'http://localhost:3000',
+  'https://alpha.amazeeclaw.amazee.ai',
+];
+
+const lagoonRouteOrigins = parseLagoonRoutes(process.env.LAGOON_ROUTES || '');
+config.gateway.controlUi.allowedOrigins = Array.from(new Set([
+  ...fixedAllowedOrigins,
+  ...lagoonRouteOrigins,
+]));
+console.log('[amazeeai-config] Set gateway.controlUi.allowedOrigins to:', config.gateway.controlUi.allowedOrigins.join(', '));
 
 
 
@@ -233,6 +363,43 @@ async function discoverModels() {
   }
 }
 
+function hasAmazeeaiEmbeddingsModel() {
+  const models = config.models?.providers?.amazeeai?.models;
+  if (!Array.isArray(models) || models.length === 0) {
+    return false;
+  }
+
+  return models.some(model => {
+    const mode = String(model?.mode || model?.type || '').toLowerCase();
+    if (mode === 'embedding' || mode === 'embeddings') {
+      return true;
+    }
+
+    const idAndName = `${model?.id || ''} ${model?.name || ''}`.toLowerCase();
+    return /\bembed(ding|dings)?\b/.test(idAndName);
+  });
+}
+
+function configureMemorySearchRemoteFromAmazeeai() {
+  if (!hasAmazeeaiEmbeddingsModel()) {
+    console.warn('[amazeeai-config] Skipping memorySearch remote override: embeddings model not found in amazeeai provider');
+    return;
+  }
+
+  // Configure remote memory-search embeddings from amazee.ai env vars.
+  // These values are intentionally overwritten on each run.
+  const memorySearchBaseUrl = (process.env.AMAZEEAI_BASE_URL || '').replace(/\/+$/, '');
+  const memorySearchApiKey = process.env.AMAZEEAI_API_KEY || '';
+  config.agents.defaults.memorySearch = config.agents.defaults.memorySearch || {};
+  config.agents.defaults.memorySearch.provider = 'openai';
+  config.agents.defaults.memorySearch.model = 'embeddings';
+  config.agents.defaults.memorySearch.remote = {
+    baseUrl: memorySearchBaseUrl ? `${memorySearchBaseUrl}/v1/` : '',
+    apiKey: memorySearchApiKey,
+  };
+  console.log('[amazeeai-config] Configured memorySearch for amazee.ai embeddings model');
+}
+
 // ============================================================
 // GATEWAY TOKEN CONFIGURATION
 // ============================================================
@@ -332,9 +499,12 @@ function sanitizeModelInputs() {
 // MAIN
 // ============================================================
 async function main() {
+  ensureBundledBootstrapFiles();
   await discoverModels();
+  configureMemorySearchRemoteFromAmazeeai();
   configureGatewayToken();
   configureChannels();
+  configureExtraBootstrapHooks();
   sanitizeModelInputs();
 
   // Write updated config
