@@ -1,4 +1,0 @@
-#!/bin/sh
-# Fix permissions on the given directory to allow group read/write
-find -L "$1" -exec chgrp 0 {} +
-find -L "$1" -exec chmod g+rwX {} +

@@ -1,12 +1,10 @@
-# Environment variables are loaded from .env.local (git-ignored, not in Docker images).
-# Copy .env.local.example to .env.local and set your values.
+# Environment variables are loaded from .env (git-ignored, not in Docker images).
+# Copy .env.example to .env and set your values.
 
 services:
   openclaw-gateway:
     platform: linux/amd64
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/amazeeio/openclaw-lagoon-base:latest
     user: "10000"
     env_file:
       - .env
