@@ -190,7 +190,10 @@ Create a Slack app from a manifest. Before importing it, replace the placeholder
 
 ### 2. Generate Slack tokens
 
-After creating the app:
+After creating your Slack app:
+- Configure the app with the basics like a color, bot icon, and description
+- On the "Basic Information" tab, generate an **App-Level Token** with scope "connections:write" (the token starts with `xapp-`)
+- Install the app to your workspace to get the **Bot User OAuth Token** (starts with `xoxb-`)
 
 - Generate an app-level token that starts with `xapp-`
 - Install the app to your workspace to get the bot user OAuth token that starts with `xoxb-`
@@ -258,7 +261,18 @@ SSH_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA...
 
 Redeploy after adding the key. The runtime will inject the SSH key during startup so OpenClaw can perform Git operations with that identity.
 
-## Local development
+## Setting up Brave for Web Search (Optional)
+
+If you want OpenClaw to search the web using Brave, you're going to need a Brave API key.
+
+If you don't already have a Brave account, head over to http://brave.com/search/api/ and click "Get Started". Following the standard signup steps, and be sure to register for at least a "Free" account. Note, you will need a credit card with at least 1 USD available to get the Free tier going.
+
+Once you have a Brave account, head over to https://api-dashboard.search.brave.com/app/keys and create an API Key. Copy the new key, and create a Lagoon variable called "BRAVE_API_KEY" as you did before.
+
+Redploy your Lagoon project to get rolling with search.
+
+
+## Local Development
 
 Local development uses the same published image as Lagoon.
 
