@@ -4,14 +4,14 @@
 services:
   openclaw-gateway:
     platform: linux/amd64
-    image: ghcr.io/amazeeio/openclaw-lagoon-base:v2026.4.5_4
+    image: ghcr.io/amazeeio/openclaw-lagoon-base:v2026.4.5_5
     user: "10000"
     env_file:
       - .env
     volumes:
       - ./.local:/home/.openclaw
     ports:
-      - "3000:3000"
+      - "3001:3000"
     labels:
       lagoon.type: node-persistent
       lagoon.persistent: /home/.openclaw
