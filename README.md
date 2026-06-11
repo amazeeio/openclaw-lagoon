@@ -41,7 +41,7 @@ Before deploying, configure these variables in your Lagoon project:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `AMAZEEAI_BASE_URL` | Base URL for your LLM API provider | `https://llm.us104.amazee.ai` |
+| `AMAZEEAI_BASE_URL` | Base URL for your LLM API provider | `https://llm.us103.amazee.ai` |
 | `AMAZEEAI_API_KEY` | API key for authentication | `your-api-key-here` |
 | `AMAZEEAI_DEFAULT_MODEL` | Default model to use | `chat` |
 
@@ -92,7 +92,7 @@ This keeps the model list aligned with the account behind the API key. If model 
 Typical startup logs look like this:
 
 ```text
-[amazeeai-config] Discovering models from: https://llm.us104.amazee.ai
+[amazeeai-config] Discovering models from: https://llm.us103.amazee.ai
 [amazeeai-config] Discovered 5 models:
 [amazeeai-config]   - chat
 [amazeeai-config]   - claude-4-opus
