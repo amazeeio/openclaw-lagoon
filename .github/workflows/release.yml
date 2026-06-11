@@ -1,0 +1,60 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version of openclaw-lagoon-base to release (e.g., v2026.4.11_2)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Fetch available tags to validate
+        run: |
+          echo "Fetching tags from amazeeio/openclaw-lagoon-base..."
+          # Fetch recent tags using GitHub API
+          TAGS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/amazeeio/openclaw-lagoon-base/tags | jq -r '.[].name' || true)
+          
+          if [ -n "$TAGS" ]; then
+            echo "Available versions in openclaw-lagoon-base:"
+            echo "$TAGS"
+            
+            if echo "$TAGS" | grep -qxF "${{ github.event.inputs.version }}"; then
+              echo "✓ Version ${{ github.event.inputs.version }} is a valid tag in openclaw-lagoon-base."
+            else
+              echo "::warning::Version ${{ github.event.inputs.version }} was not found in the recent tags list of openclaw-lagoon-base. Proceeding anyway..."
+            fi
+          else
+            echo "Unable to fetch tags from openclaw-lagoon-base (rate limit or access issue). Proceeding with user input."
+          fi
+
+      - name: Update docker-compose.yml
+        run: |
+          # Use yq to update the image tag for the openclaw-gateway service
+          yq -i '.services.openclaw-gateway.image = "ghcr.io/amazeeio/openclaw-lagoon-base:${{ github.event.inputs.version }}"' docker-compose.yml
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "release: update openclaw-lagoon-base to ${{ github.event.inputs.version }}"
+          branch: "release/update-to-${{ github.event.inputs.version }}"
+          title: "Release: Update to ${{ github.event.inputs.version }}"
+          body: |
+            This Pull Request updates the base image version of `openclaw-gateway` to `${{ github.event.inputs.version }}` in `docker-compose.yml`.
+            
+            - **Target Version:** `${{ github.event.inputs.version }}`
+            
+            Please review the changes and merge to deploy.
+          delete-branch: true
