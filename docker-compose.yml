@@ -4,7 +4,7 @@
 services:
   openclaw-gateway:
     platform: linux/amd64
-    image: ghcr.io/amazeeio/openclaw-lagoon-base:v2026.4.11_2
+    image: ghcr.io/amazeeio/openclaw-lagoon-base:v2026.6.5
     user: "10000"
     env_file:
       - .env
