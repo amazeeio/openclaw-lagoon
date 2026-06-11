@@ -6,8 +6,10 @@ services:
     platform: linux/amd64
     image: ghcr.io/amazeeio/openclaw-lagoon-base:v2026.6.5
     user: "10000"
-    env_file:
-      - .env
+    environment:
+      - AMAZEEAI_BASE_URL=${AMAZEEAI_BASE_URL:-https://llm.us104.amazee.ai}
+      - AMAZEEAI_API_KEY=${AMAZEEAI_API_KEY}
+      - AMAZEEAI_DEFAULT_MODEL=${AMAZEEAI_DEFAULT_MODEL:-chat}
     volumes:
       - ./.local:/home/.openclaw
     ports:

@@ -43,7 +43,7 @@ Before deploying, configure these variables in your Lagoon project:
 |----------|-------------|---------|
 | `AMAZEEAI_BASE_URL` | Base URL for your LLM API provider | `https://llm.us104.amazee.ai` |
 | `AMAZEEAI_API_KEY` | API key for authentication | `your-api-key-here` |
-| `AMAZEEAI_DEFAULT_MODEL` | Default model to use | `claude-4-5-sonnet` |
+| `AMAZEEAI_DEFAULT_MODEL` | Default model to use | `chat` |
 
 You can set these values through the Lagoon UI or CLI before deployment.
 
@@ -94,12 +94,12 @@ Typical startup logs look like this:
 ```text
 [amazeeai-config] Discovering models from: https://llm.us104.amazee.ai
 [amazeeai-config] Discovered 5 models:
-[amazeeai-config]   - claude-4-5-sonnet
+[amazeeai-config]   - chat
 [amazeeai-config]   - claude-4-opus
 [amazeeai-config]   - gpt-4o
 [amazeeai-config]   - gpt-4o-mini
 [amazeeai-config]   - o1
-[amazeeai-config] Set default model to: amazeeai/claude-4-5-sonnet
+[amazeeai-config] Set default model to: amazeeai/chat
 ```
 
 ## Slack integration
