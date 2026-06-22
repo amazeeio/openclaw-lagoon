@@ -1,0 +1,57 @@
+name: Validate Base Image Version
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Extract image tag
+        id: get_tag
+        run: |
+          TAG=$(grep -E 'image:\s*ghcr.io/amazeeio/openclaw-lagoon-base:' docker-compose.yml | sed -e 's/.*openclaw-lagoon-base://' -e 's/["'\'']//g' | xargs)
+          if [ -z "$TAG" ]; then
+            echo "::error::Could not extract base image tag from docker-compose.yml"
+            exit 1
+          fi
+          echo "Extracted tag: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Validate tag exists
+        run: |
+          TAG="${{ steps.get_tag.outputs.tag }}"
+          
+          if [ "$TAG" = "dev" ]; then
+            echo "✓ Floating 'dev' tag is always valid."
+            exit 0
+          fi
+          
+          echo "Validating tag '$TAG' against amazeeio/openclaw-lagoon-base..."
+          
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/amazeeio/openclaw-lagoon-base/git/ref/tags/${TAG}")
+            
+          if [ "$STATUS_CODE" -eq 200 ]; then
+            echo "✓ Tag '$TAG' exists in openclaw-lagoon-base."
+            exit 0
+          elif [ "$STATUS_CODE" -eq 404 ]; then
+            echo "::error::The base image tag '$TAG' does not exist as a valid git tag in amazeeio/openclaw-lagoon-base."
+            echo "::error::Did you forget the 'v' prefix or use an incorrect version number?"
+            exit 1
+          else
+            echo "::warning::GitHub API returned unexpected status code: $STATUS_CODE. Skipping validation check."
+            exit 0
+          fi
