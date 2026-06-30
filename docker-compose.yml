@@ -4,7 +4,7 @@
 services:
   openclaw-gateway:
     platform: linux/amd64
-    image: ghcr.io/amazeeio/openclaw-lagoon-base:v2026.6.10_3
+    image: ghcr.io/amazeeio/openclaw-lagoon-base:v2026.6.10_4
     user: "10000"
     environment:
       - AMAZEEAI_BASE_URL=${AMAZEEAI_BASE_URL:-https://llm.us103.amazee.ai}
