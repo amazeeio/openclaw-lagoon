@@ -17,4 +17,3 @@ services:
     labels:
       lagoon.type: node-persistent
       lagoon.persistent: /home/.openclaw
-      lagoon.rollout: recreate
