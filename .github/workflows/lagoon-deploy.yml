@@ -1,0 +1,100 @@
+name: Lagoon Deploy
+
+# Explicit, per-project Lagoon deploys — the replacement for the git-URL
+# webhook trigger. Lagoon matches webhook pushes by git URL, and since every
+# openclaw project is built from this one shared repo, a single push fanned
+# out a bulk deploy to ALL projects at once (546 concurrent builds), which
+# overloaded the Lagoon core and its queues. This workflow only ever deploys
+# projects that are explicitly named, one at a time.
+#
+# Configuration (repo Settings -> Secrets and variables -> Actions):
+#   secret LAGOON_SSH_PRIVATE_KEY
+#       SSH private key of a Lagoon user with the developer role on the
+#       target projects.
+#   variable LAGOON_DEPLOY_PROJECTS
+#       Comma- or space-separated list of Lagoon project names to deploy
+#       when this repo's main branch changes. Editable in the repo settings
+#       without a code change.
+#   variable LAGOON_DEPLOY_ENVIRONMENT (optional)
+#       Lagoon environment name, defaults to "main".
+#
+# Deploys run strictly one at a time (max-parallel: 1) and wait for each
+# build to finish before starting the next — keep LAGOON_DEPLOY_PROJECTS to
+# the modest set of managed/reference projects; fleet-wide rollouts belong
+# to Polydock's throttled scheduled-redeploy pipeline.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      projects:
+        description: 'Project(s) to deploy, comma-separated. Empty = use the LAGOON_DEPLOY_PROJECTS repository variable.'
+        required: false
+        type: string
+      environment:
+        description: 'Lagoon environment (empty = LAGOON_DEPLOY_ENVIRONMENT variable, or "main")'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+# Never let two deploy runs interleave (e.g. two quick merges to main).
+concurrency:
+  group: lagoon-deploy
+  cancel-in-progress: false
+
+jobs:
+  resolve-projects:
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.list.outputs.projects }}
+      environment: ${{ steps.list.outputs.environment }}
+    steps:
+      - name: Resolve project list
+        id: list
+        env:
+          # github.event.inputs.* (not inputs.*) so push runs, which have no
+          # inputs context, safely resolve these to empty instead of failing.
+          INPUT_PROJECTS: ${{ github.event.inputs.projects }}
+          VAR_PROJECTS: ${{ vars.LAGOON_DEPLOY_PROJECTS }}
+          INPUT_ENVIRONMENT: ${{ github.event.inputs.environment }}
+          VAR_ENVIRONMENT: ${{ vars.LAGOON_DEPLOY_ENVIRONMENT }}
+        run: |
+          RAW="${INPUT_PROJECTS:-$VAR_PROJECTS}"
+
+          if [ -z "$RAW" ]; then
+            echo "::error::No projects to deploy. Pass the 'projects' input or set the LAGOON_DEPLOY_PROJECTS repository variable."
+            exit 1
+          fi
+
+          # Commas and/or whitespace -> JSON array for the deploy matrix.
+          PROJECTS=$(echo "$RAW" | tr ',' ' ' | xargs -n1 | jq -R . | jq -sc .)
+          ENVIRONMENT="${INPUT_ENVIRONMENT:-${VAR_ENVIRONMENT:-main}}"
+
+          echo "projects=$PROJECTS" >> "$GITHUB_OUTPUT"
+          echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
+          echo "Will deploy $(echo "$PROJECTS" | jq length) project(s) to environment '$ENVIRONMENT': $PROJECTS"
+
+  deploy:
+    needs: resolve-projects
+    runs-on: ubuntu-latest
+    strategy:
+      # Strictly sequential and completion-gated: the next project's build
+      # only starts after the previous one finishes. Never bursts Lagoon.
+      max-parallel: 1
+      # One failed project must not block the rest of the list.
+      fail-fast: false
+      matrix:
+        project: ${{ fromJson(needs.resolve-projects.outputs.projects) }}
+    steps:
+      - name: Deploy ${{ matrix.project }}
+        uses: uselagoon/lagoon-action@v1.0.1
+        with:
+          action: deploy
+          ssh_private_key: ${{ secrets.LAGOON_SSH_PRIVATE_KEY }}
+          lagoon_project: ${{ matrix.project }}
+          lagoon_environment: ${{ needs.resolve-projects.outputs.environment }}
+          wait_for_deployment: 'true'
+          max_deployment_timeout: '30'
