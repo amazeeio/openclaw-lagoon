@@ -9,8 +9,14 @@ name: Lagoon Deploy
 #
 # Configuration (repo Settings -> Secrets and variables -> Actions):
 #   secret LAGOON_SSH_PRIVATE_KEY
-#       SSH private key of a Lagoon user with the developer role on the
-#       target projects.
+#       SSH private key of a Lagoon user with the MAINTAINER role on the
+#       target projects. "main" is a production environment, and deploying
+#       production requires the deploy:production permission, which the
+#       developer role does NOT grant (only maintainer and above do). A
+#       developer-role key fails with:
+#         Unauthorized: You don't have permission to "deploy:production"
+#       If LAGOON_DEPLOY_ENVIRONMENT only ever targets development
+#       environments, the developer role is sufficient.
 #   variable LAGOON_DEPLOY_PROJECTS
 #       Comma- or space-separated list of Lagoon project names to deploy
 #       when this repo's main branch changes. Editable in the repo settings
