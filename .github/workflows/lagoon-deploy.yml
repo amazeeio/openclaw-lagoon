@@ -55,9 +55,11 @@ jobs:
       - name: Resolve project list
         id: list
         env:
-          INPUT_PROJECTS: ${{ inputs.projects }}
+          # github.event.inputs.* (not inputs.*) so push runs, which have no
+          # inputs context, safely resolve these to empty instead of failing.
+          INPUT_PROJECTS: ${{ github.event.inputs.projects }}
           VAR_PROJECTS: ${{ vars.LAGOON_DEPLOY_PROJECTS }}
-          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          INPUT_ENVIRONMENT: ${{ github.event.inputs.environment }}
           VAR_ENVIRONMENT: ${{ vars.LAGOON_DEPLOY_ENVIRONMENT }}
         run: |
           RAW="${INPUT_PROJECTS:-$VAR_PROJECTS}"
