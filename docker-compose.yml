@@ -15,5 +15,5 @@ services:
     ports:
       - "3001:3000"
     labels:
-      lagoon.type: node-persistent
+      lagoon.type: basic-single
       lagoon.persistent: /home/.openclaw
