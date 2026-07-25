@@ -25,6 +25,10 @@ jobs:
         id: get_tag
         run: |
           TAG=$(grep -E 'image:\s*ghcr.io/amazeeio/openclaw-lagoon-base:' docker-compose.yml | sed -e 's/.*openclaw-lagoon-base://' -e 's/["'\'']//g' | xargs)
+          # Unwrap the OPENCLAW_BASE_TAG override syntax: ${OPENCLAW_BASE_TAG:-vX.Y.Z} -> vX.Y.Z (validate the default)
+          case "$TAG" in
+            '${OPENCLAW_BASE_TAG:-'*'}') TAG="${TAG#\$\{OPENCLAW_BASE_TAG:-}"; TAG="${TAG%\}}" ;;
+          esac
           if [ -z "$TAG" ]; then
             echo "::error::Could not extract base image tag from docker-compose.yml"
             exit 1

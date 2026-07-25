@@ -4,7 +4,9 @@
 services:
   openclaw-gateway:
     platform: linux/amd64
-    image: ghcr.io/amazeeio/openclaw-lagoon-base:v2026.7.2-beta.2_7
+    # Tag override: set a project/environment-level Lagoon variable (build scope)
+    # OPENCLAW_BASE_TAG to pin a project to a specific base image version.
+    image: ghcr.io/amazeeio/openclaw-lagoon-base:${OPENCLAW_BASE_TAG:-v2026.7.2-beta.2_7}
     user: "10000"
     environment:
       - AMAZEEAI_BASE_URL=${AMAZEEAI_BASE_URL:-https://llm.us103.amazee.ai}
