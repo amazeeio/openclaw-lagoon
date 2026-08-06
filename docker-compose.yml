@@ -19,3 +19,10 @@ services:
     labels:
       lagoon.type: basic-single
       lagoon.persistent: /home/.openclaw
+      # Volume size override: set a project/environment-level Lagoon variable
+      # (build scope) OPENCLAW_VOLUME_SIZE to give one project a larger volume.
+      # The default matches the basic-single service-type default, so projects
+      # without the variable keep the volume they already have. Growing an
+      # existing volume needs allowVolumeExpansion on its StorageClass, and
+      # Kubernetes never allows shrinking one back.
+      lagoon.persistent.size: ${OPENCLAW_VOLUME_SIZE:-5Gi}
