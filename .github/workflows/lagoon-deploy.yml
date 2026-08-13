@@ -96,7 +96,7 @@ jobs:
         project: ${{ fromJson(needs.resolve-projects.outputs.projects) }}
     steps:
       - name: Deploy ${{ matrix.project }}
-        uses: uselagoon/lagoon-action@v1.0.1
+        uses: uselagoon/lagoon-action@f3b742472a969b69954d1c7c4f5c6361927da587 # v1.0.1
         with:
           action: deploy
           ssh_private_key: ${{ secrets.LAGOON_SSH_PRIVATE_KEY }}
