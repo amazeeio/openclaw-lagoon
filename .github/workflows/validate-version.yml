@@ -62,3 +62,55 @@ jobs:
             echo "::warning::GitHub API returned unexpected status code: $STATUS_CODE. Skipping validation check."
             exit 0
           fi
+
+      # A git tag proves nothing about deployability: a release run can push the
+      # tag and then fail its image build, leaving a tag with no image behind it.
+      # Deploying that pins every environment to an unpullable image, so this
+      # check queries GHCR itself and fails closed.
+      - name: Validate image is published to GHCR
+        run: |
+          TAG="${{ steps.get_tag.outputs.tag }}"
+
+          if [ "$TAG" = "dev" ]; then
+            echo "✓ Floating 'dev' tag is always valid."
+            exit 0
+          fi
+
+          IMAGE="amazeeio/openclaw-lagoon-base"
+          ACCEPT="application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json"
+
+          echo "Checking ghcr.io/${IMAGE}:${TAG} is published..."
+
+          STATUS_CODE=000
+          for attempt in 1 2 3; do
+            TOKEN=$(curl -s "https://ghcr.io/token?scope=repository:${IMAGE}:pull&service=ghcr.io" | jq -r '.token // empty')
+
+            if [ -n "$TOKEN" ]; then
+              STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+                -H "Authorization: Bearer ${TOKEN}" \
+                -H "Accept: ${ACCEPT}" \
+                "https://ghcr.io/v2/${IMAGE}/manifests/${TAG}")
+            else
+              STATUS_CODE=000
+            fi
+
+            case "$STATUS_CODE" in
+              200)
+                echo "✓ Image ghcr.io/${IMAGE}:${TAG} is published."
+                exit 0
+                ;;
+              404)
+                echo "::error::ghcr.io/${IMAGE}:${TAG} is not published to GHCR."
+                echo "::error::The git tag can exist while its image build failed - check the 'Release OpenClaw' run in openclaw-lagoon-base for that tag."
+                echo "::error::Deploying this tag would fail at image pull, leaving environments without a route."
+                exit 1
+                ;;
+              *)
+                echo "GHCR returned ${STATUS_CODE} (attempt ${attempt}/3); retrying in 5s..."
+                sleep 5
+                ;;
+            esac
+          done
+
+          echo "::error::Could not confirm ghcr.io/${IMAGE}:${TAG} exists after 3 attempts (last status: ${STATUS_CODE})."
+          exit 1
