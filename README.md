@@ -85,9 +85,10 @@ At startup the image will:
 - Query the amazee.ai `/v1/models` endpoint with your credentials
 - Discover the models available to that API key
 - Inject those models into OpenClaw's runtime configuration
-- Apply `AMAZEEAI_DEFAULT_MODEL` as the default when it is available
+- Keep the user's chosen model while amazee.ai still serves it; a missing or retired one falls back to `AMAZEEAI_DEFAULT_MODEL`, then the `chat` alias
+- Drop retired models from fallbacks and per-agent model settings
 
-This keeps the model list aligned with the account behind the API key. If model access changes, restart or redeploy the service to refresh discovery.
+This keeps the model list aligned with the account behind the API key. A daily Lagoon cron job (see `.lagoon.yml`) reruns discovery between deploys, and the gateway hot-reloads the result without a restart.
 
 Typical startup logs look like this:
 
