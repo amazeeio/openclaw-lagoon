@@ -88,7 +88,7 @@ At startup the image will:
 - Keep the user's chosen model while amazee.ai still serves it; a missing or retired one falls back to `AMAZEEAI_DEFAULT_MODEL`, then the `chat` alias
 - Drop retired models from fallbacks and per-agent model settings
 
-This keeps the model list aligned with the account behind the API key. A daily Lagoon cron job (see `.lagoon.yml`) reruns discovery between deploys, and the gateway hot-reloads the result without a restart.
+This keeps the model list aligned with the account behind the API key. The gateway container also reruns discovery daily between deploys, and the gateway hot-reloads the result without a restart (set `AMAZEEAI_DISABLE_BACKGROUND_REFRESH=true` to turn this off).
 
 Typical startup logs look like this:
 
