@@ -1,12 +1,1 @@
 docker-compose-yaml: docker-compose.yml
-
-# Pick up model rollouts/retirements on amazee.ai without waiting for a redeploy.
-# The gateway hot-reloads models/agents from openclaw.json, so no restart needed.
-# Instances deployed from another branch need their own entry here.
-environments:
-  main:
-    cronjobs:
-      - name: refresh amazee.ai models
-        schedule: "M H * * *"
-        command: node /lagoon/amazeeai-model-refresher.js
-        service: openclaw-gateway
