@@ -61,11 +61,20 @@ jobs:
           # preserving the OPENCLAW_BASE_TAG per-project override syntax.
           yq -i '.services.openclaw-gateway.image = "ghcr.io/amazeeio/openclaw-lagoon-base:${OPENCLAW_BASE_TAG:-${{ steps.resolve.outputs.version }}}"' docker-compose.yml
 
+      # Open the pull request as the org's automation GitHub App rather than
+      # github.token, so anything that runs on pull requests is triggered.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        if: steps.resolve.outputs.changed == 'true'
+        with:
+          client-id: ${{ secrets.AMAZEE_AI_AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AMAZEE_AI_AUTOMATION_APP_PRIVATE_KEY }}
+
       - name: Create Pull Request
         if: steps.resolve.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app.outputs.token }}
           commit-message: "release: update openclaw-lagoon-base to ${{ steps.resolve.outputs.version }}"
           branch: "release/update-to-${{ steps.resolve.outputs.version }}"
           title: "Release: Update to ${{ steps.resolve.outputs.version }}"
