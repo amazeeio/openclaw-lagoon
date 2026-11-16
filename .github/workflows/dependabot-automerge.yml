@@ -1,0 +1,57 @@
+name: Dependabot auto-merge
+
+# Merges Dependabot PRs for patch, minor and digest updates once every other
+# check on the PR has passed. Major updates are left for a human.
+#
+# The merge runs as the org's automation GitHub App, not GITHUB_TOKEN: pushes
+# made with GITHUB_TOKEN never trigger other workflows, so a merge made with
+# it would skip the publish/deploy workflows that run on the default branch.
+#
+# Dependabot-triggered runs only see Dependabot secrets, so the org needs
+# AMAZEE_AI_AUTOMATION_APP_CLIENT_ID and AMAZEE_AI_AUTOMATION_APP_PRIVATE_KEY
+# as Dependabot secrets (Settings -> Secrets and variables -> Dependabot),
+# not only as Actions secrets.
+
+on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  automerge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app
+        if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        with:
+          client-id: ${{ secrets.AMAZEE_AI_AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AMAZEE_AI_AUTOMATION_APP_PRIVATE_KEY }}
+
+      - name: Wait for checks, then merge
+        if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PR: ${{ github.event.pull_request.html_url }}
+          SELF: ${{ github.workflow }}
+        run: |
+          # ponytail: no branch protection on these repos, so poll the PR's
+          # other checks here instead of relying on GitHub auto-merge.
+          sleep 30
+          while :; do
+            buckets=$(gh pr checks "$PR" --json workflow,bucket \
+              --jq '[.[] | select(.workflow != env.SELF) | .bucket] | unique | join(" ")' || true)
+            case " $buckets " in
+              *" pending "*) sleep 30 ;;
+              *" fail "*|*" cancel "*) echo "::error::Checks did not pass ($buckets); not merging."; exit 1 ;;
+              *) break ;;
+            esac
+          done
+          gh pr merge "$PR" --squash --delete-branch
