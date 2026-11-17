@@ -37,8 +37,10 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Validate tag exists
+        env:
+          TAG: ${{ steps.get_tag.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ steps.get_tag.outputs.tag }}"
           
           if [ "$TAG" = "dev" ]; then
             echo "✓ Floating 'dev' tag is always valid."
@@ -48,7 +50,7 @@ jobs:
           echo "Validating tag '$TAG' against amazeeio/openclaw-lagoon-base..."
           
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: token ${GH_TOKEN}" \
             "https://api.github.com/repos/amazeeio/openclaw-lagoon-base/git/ref/tags/${TAG}")
             
           if [ "$STATUS_CODE" -eq 200 ]; then
@@ -68,9 +70,9 @@ jobs:
       # Deploying that pins every environment to an unpullable image, so this
       # check queries GHCR itself and fails closed.
       - name: Validate image is published to GHCR
+        env:
+          TAG: ${{ steps.get_tag.outputs.tag }}
         run: |
-          TAG="${{ steps.get_tag.outputs.tag }}"
-
           if [ "$TAG" = "dev" ]; then
             echo "✓ Floating 'dev' tag is always valid."
             exit 0

@@ -25,12 +25,20 @@ jobs:
 
       - name: Resolve target version
         id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           echo "Fetching tags from amazeeio/openclaw-lagoon-base..."
-          TAGS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          TAGS=$(curl -s -H "Authorization: token ${GH_TOKEN}" \
             https://api.github.com/repos/amazeeio/openclaw-lagoon-base/tags | jq -r '.[].name' || true)
 
-          VERSION="${{ github.event.inputs.version }}"
+          VERSION="$INPUT_VERSION"
+          # The version flows into a branch name, yq and the PR body: allow tag characters only.
+          if [ -n "$VERSION" ] && ! [[ "$VERSION" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::Invalid version '$VERSION'."
+            exit 1
+          fi
           if [ -z "$VERSION" ]; then
             # ponytail: sort -V ranks a bare vX.Y.Z below vX.Y.Z-beta.*, but upstream
             # stable tags always carry a _N suffix (v2026.7.1_2), which sorts above betas.
@@ -56,10 +64,12 @@ jobs:
 
       - name: Update docker-compose.yml
         if: steps.resolve.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
         run: |
           # Use yq to update the default image tag for the openclaw-gateway service,
           # preserving the OPENCLAW_BASE_TAG per-project override syntax.
-          yq -i '.services.openclaw-gateway.image = "ghcr.io/amazeeio/openclaw-lagoon-base:${OPENCLAW_BASE_TAG:-${{ steps.resolve.outputs.version }}}"' docker-compose.yml
+          yq -i '.services.openclaw-gateway.image = "ghcr.io/amazeeio/openclaw-lagoon-base:${OPENCLAW_BASE_TAG:-" + strenv(VERSION) + "}"' docker-compose.yml
 
       # Open the pull request as the org's automation GitHub App rather than
       # github.token, so anything that runs on pull requests is triggered.
